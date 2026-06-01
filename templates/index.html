@@ -1,288 +1,478 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" data-theme="light">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Medical RAG Assistant</title>
-  <meta name="description" content="An accessible AI medical assistant powered by Retrieval-Augmented Generation." />
-  <meta name="color-scheme" content="light dark" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Medical RAG Assistant</title>
+    <meta
+      name="description"
+      content="An accessible AI medical assistant powered by Retrieval-Augmented Generation."
+    />
+    <meta name="color-scheme" content="light dark" />
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Noto+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
-</head>
-<body>
-  <!-- Set theme before paint to avoid flash -->
-  <script>
-    (function () {
-      var saved = localStorage.getItem('theme');
-      var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-    })();
-  </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Noto+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
 
-  <a class="skip-link" href="#composerInput" style="position:absolute;left:-9999px;">Skip to message input</a>
+    <!-- Feature 13: markdown rendering + sanitisation -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+  </head>
+  <body>
+    <!-- Set theme before paint to avoid flash -->
+    <script>
+      (function () {
+        var saved = localStorage.getItem("theme");
+        var dark = saved
+          ? saved === "dark"
+          : window.matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.setAttribute(
+          "data-theme",
+          dark ? "dark" : "light",
+        );
+      })();
+    </script>
 
-  <main class="main">
-    <!-- ===================== Top bar ===================== -->
-    <header class="topbar">
-      <span class="brand__mark" aria-hidden="true">
-        <!-- stethoscope -->
-        <svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/>
-          <path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/>
-          <circle cx="20" cy="10" r="2"/>
-        </svg>
-      </span>
-      <div class="topbar__heading">
-        <span class="topbar__title">Medical RAG Assistant</span>
-        <span class="topbar__status"><span class="status-dot" aria-hidden="true"></span> Online</span>
-      </div>
-      <span class="topbar__spacer"></span>
-      <button class="icon-btn" id="themeToggle" type="button" aria-label="Toggle dark mode">
-        <span class="theme-icon" aria-hidden="true"></span>
-      </button>
-    </header>
+    <a
+      class="skip-link"
+      href="#composerInput"
+      style="position: absolute; left: -9999px"
+      >Skip to message input</a
+    >
 
-    <!-- ===================== Thread ===================== -->
-    <section class="thread" id="thread" aria-live="polite" aria-label="Conversation">
-      <div class="thread__inner" id="threadInner">
-        <!-- Welcome / empty state -->
-        <div class="welcome" id="welcome">
-          <span class="welcome__mark" aria-hidden="true">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/>
-              <path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/>
-              <circle cx="20" cy="10" r="2"/>
-            </svg>
-          </span>
-          <h1>How can I help you today?</h1>
-          <p>Ask a health-related question and I'll answer using my medical knowledge base. I can explain conditions, symptoms, and general guidance.</p>
-
-          <div class="suggestions" id="suggestions">
-            <button class="suggestion" type="button" data-q="What are the common symptoms of acne and how is it treated?">
-              <strong>Explain a condition</strong>
-              <span>Symptoms &amp; treatment of acne</span>
-            </button>
-            <button class="suggestion" type="button" data-q="What is the difference between Type 1 and Type 2 diabetes?">
-              <strong>Compare conditions</strong>
-              <span>Type 1 vs Type 2 diabetes</span>
-            </button>
-            <button class="suggestion" type="button" data-q="What lifestyle changes help lower high blood pressure?">
-              <strong>Get guidance</strong>
-              <span>Lowering blood pressure</span>
-            </button>
-            <button class="suggestion" type="button" data-q="What are the warning signs of dehydration?">
-              <strong>Recognize warning signs</strong>
-              <span>Signs of dehydration</span>
-            </button>
-          </div>
+    <main class="main">
+      <!-- ===================== Top bar ===================== -->
+      <header class="topbar">
+        <span class="brand__mark" aria-hidden="true">
+          <!-- stethoscope -->
+          <svg
+            class="icon icon--sm"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"
+            />
+            <path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4" />
+            <circle cx="20" cy="10" r="2" />
+          </svg>
+        </span>
+        <div class="topbar__heading">
+          <span class="topbar__title">Medical RAG Assistant</span>
+          <span class="topbar__status"
+            ><span class="status-dot" aria-hidden="true"></span> Online</span
+          >
         </div>
-        <!-- Messages get appended here -->
+        <span class="topbar__spacer"></span>
+        <button
+          class="icon-btn"
+          id="themeToggle"
+          type="button"
+          aria-label="Toggle dark mode"
+        >
+          <span class="theme-icon" aria-hidden="true"></span>
+        </button>
+      </header>
+
+      <!-- ===================== Thread ===================== -->
+      <section
+        class="thread"
+        id="thread"
+        aria-live="polite"
+        aria-label="Conversation"
+      >
+        <div class="thread__inner" id="threadInner">
+          <!-- Welcome / empty state -->
+          <div class="welcome" id="welcome">
+            <span class="welcome__mark" aria-hidden="true">
+              <svg
+                class="icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"
+                />
+                <path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4" />
+                <circle cx="20" cy="10" r="2" />
+              </svg>
+            </span>
+            <h1>How can I help you today?</h1>
+            <p>
+              Ask a health-related question and I'll answer using my medical
+              knowledge base. I can explain conditions, symptoms, and general
+              guidance.
+            </p>
+
+            <div class="suggestions" id="suggestions">
+              <button
+                class="suggestion"
+                type="button"
+                data-q="What are the common symptoms of acne and how is it treated?"
+              >
+                <strong>Explain a condition</strong>
+                <span>Symptoms &amp; treatment of acne</span>
+              </button>
+              <button
+                class="suggestion"
+                type="button"
+                data-q="What is the difference between Type 1 and Type 2 diabetes?"
+              >
+                <strong>Compare conditions</strong>
+                <span>Type 1 vs Type 2 diabetes</span>
+              </button>
+              <button
+                class="suggestion"
+                type="button"
+                data-q="What lifestyle changes help lower high blood pressure?"
+              >
+                <strong>Get guidance</strong>
+                <span>Lowering blood pressure</span>
+              </button>
+              <button
+                class="suggestion"
+                type="button"
+                data-q="What are the warning signs of dehydration?"
+              >
+                <strong>Recognize warning signs</strong>
+                <span>Signs of dehydration</span>
+              </button>
+            </div>
+          </div>
+          <!-- Messages get appended here -->
+        </div>
+      </section>
+
+      <!-- ===================== Composer ===================== -->
+      <div class="composer">
+        <div class="composer__inner">
+          <form class="composer__box" id="chatForm" autocomplete="off">
+            <label
+              for="composerInput"
+              class="sr-only"
+              style="position: absolute; left: -9999px"
+              >Message</label
+            >
+            <textarea
+              id="composerInput"
+              class="composer__input"
+              name="msg"
+              rows="1"
+              maxlength="1000"
+              placeholder="Message Medical Assistant…"
+              required
+            ></textarea>
+            <button
+              class="send-btn"
+              id="sendBtn"
+              type="submit"
+              aria-label="Send message"
+              disabled
+            >
+              <svg
+                class="icon icon--sm"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 19V5M5 12l7-7 7 7" />
+              </svg>
+            </button>
+          </form>
+          <p class="disclaimer">
+            For informational purposes only — not a substitute for professional
+            medical advice. Please ask simple and concise questions, do not
+            overload LLMs.
+          </p>
+        </div>
       </div>
-    </section>
+    </main>
 
-    <!-- ===================== Composer ===================== -->
-    <div class="composer">
-      <div class="composer__inner">
-        <form class="composer__box" id="chatForm" autocomplete="off">
-          <label for="composerInput" class="sr-only" style="position:absolute;left:-9999px;">Message</label>
-          <textarea
-            id="composerInput"
-            class="composer__input"
-            name="msg"
-            rows="1"
-            placeholder="Message Medical Assistant…"
-            required></textarea>
-          <button class="send-btn" id="sendBtn" type="submit" aria-label="Send message" disabled>
-            <svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-          </button>
-        </form>
-        <p class="disclaimer">For informational purposes only — not a substitute for professional medical advice.</p>
-      </div>
-    </div>
-  </main>
+    <!-- ===================== Icon templates for JS-created messages ===================== -->
+    <template id="tpl-assistant-icon">
+      <svg
+        class="icon icon--sm"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path
+          d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"
+        />
+        <path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4" />
+        <circle cx="20" cy="10" r="2" />
+      </svg>
+    </template>
+    <template id="tpl-user-icon">
+      <svg
+        class="icon icon--sm"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </svg>
+    </template>
 
-  <!-- ===================== Icon templates for JS-created messages ===================== -->
-  <template id="tpl-assistant-icon">
-    <svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/>
-      <path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/>
-    </svg>
-  </template>
-  <template id="tpl-user-icon">
-    <svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-  </template>
+    <script>
+      const $ = (s, ctx = document) => ctx.querySelector(s);
 
-  <script>
-    const $ = (s, ctx = document) => ctx.querySelector(s);
+      const thread = $("#thread");
+      const threadInner = $("#threadInner");
+      const welcome = $("#welcome");
+      const form = $("#chatForm");
+      const input = $("#composerInput");
+      const sendBtn = $("#sendBtn");
 
-    const thread = $('#thread');
-    const threadInner = $('#threadInner');
-    const welcome = $('#welcome');
-    const form = $('#chatForm');
-    const input = $('#composerInput');
-    const sendBtn = $('#sendBtn');
+      /* ---------- Theme toggle ---------- */
+      const sunIcon =
+        '<svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+      const moonIcon =
+        '<svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
 
-    /* ---------- Theme toggle ---------- */
-    const sunIcon = '<svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
-    const moonIcon = '<svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
-
-    function syncThemeIcon() {
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      $('.theme-icon').innerHTML = isDark ? sunIcon : moonIcon;
-    }
-    syncThemeIcon();
-
-    $('#themeToggle').addEventListener('click', () => {
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      const next = isDark ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('theme', next);
+      function syncThemeIcon() {
+        const isDark =
+          document.documentElement.getAttribute("data-theme") === "dark";
+        $(".theme-icon").innerHTML = isDark ? sunIcon : moonIcon;
+      }
       syncThemeIcon();
-    });
 
-    /* ---------- Helpers ---------- */
-    function timeNow() {
-      return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    function scrollToBottom() { thread.scrollTop = thread.scrollHeight; }
-
-    function iconFor(sender) {
-      const tpl = sender === 'user' ? '#tpl-user-icon' : '#tpl-assistant-icon';
-      return $(tpl).content.cloneNode(true);
-    }
-
-    function addMessage(text, sender) {
-      if (welcome && welcome.parentNode) welcome.remove();
-
-      const row = document.createElement('div');
-      row.className = 'row row--' + sender;
-
-      const avatar = document.createElement('div');
-      avatar.className = 'row__avatar';
-      avatar.setAttribute('aria-hidden', 'true');
-      avatar.appendChild(iconFor(sender));
-
-      const content = document.createElement('div');
-      content.className = 'row__content';
-
-      const author = document.createElement('div');
-      author.className = 'row__author';
-      author.innerHTML = sender === 'user'
-        ? 'You'
-        : 'Medical Assistant <small>' + timeNow() + '</small>';
-
-      const bubble = document.createElement('div');
-      bubble.className = 'bubble';
-      bubble.textContent = text;
-
-      content.appendChild(author);
-      content.appendChild(bubble);
-
-      if (sender === 'assistant') {
-        const actions = document.createElement('div');
-        actions.className = 'row__actions';
-        const copyBtn = document.createElement('button');
-        copyBtn.className = 'action-btn';
-        copyBtn.type = 'button';
-        copyBtn.innerHTML = '<svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy';
-        copyBtn.addEventListener('click', () => {
-          navigator.clipboard.writeText(text).then(() => {
-            copyBtn.lastChild.textContent = ' Copied';
-            setTimeout(() => { copyBtn.lastChild.textContent = ' Copy'; }, 1500);
-          });
-        });
-        actions.appendChild(copyBtn);
-        content.appendChild(actions);
-      }
-
-      row.appendChild(avatar);
-      row.appendChild(content);
-      threadInner.appendChild(row);
-      scrollToBottom();
-      return row;
-    }
-
-    function showTyping() {
-      const row = document.createElement('div');
-      row.className = 'row row--assistant typing';
-      row.id = 'typingRow';
-      const avatar = document.createElement('div');
-      avatar.className = 'row__avatar';
-      avatar.setAttribute('aria-hidden', 'true');
-      avatar.appendChild(iconFor('assistant'));
-      const content = document.createElement('div');
-      content.className = 'row__content';
-      content.innerHTML = '<div class="row__author">Medical Assistant</div><div class="bubble"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
-      row.appendChild(avatar);
-      row.appendChild(content);
-      threadInner.appendChild(row);
-      scrollToBottom();
-    }
-    function removeTyping() {
-      const t = $('#typingRow');
-      if (t) t.remove();
-    }
-
-    /* ---------- Input behavior ---------- */
-    function autoGrow() {
-      input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 200) + 'px';
-      sendBtn.disabled = input.value.trim().length === 0;
-    }
-    input.addEventListener('input', autoGrow);
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        form.requestSubmit();
-      }
-    });
-
-    /* ---------- Suggestion chips ---------- */
-    document.querySelectorAll('.suggestion').forEach((chip) => {
-      chip.addEventListener('click', () => {
-        input.value = chip.dataset.q;
-        autoGrow();
-        input.focus();
-        form.requestSubmit();
+      $("#themeToggle").addEventListener("click", () => {
+        const isDark =
+          document.documentElement.getAttribute("data-theme") === "dark";
+        const next = isDark ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", next);
+        localStorage.setItem("theme", next);
+        syncThemeIcon();
       });
-    });
 
-    /* ---------- Submit ---------- */
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const text = input.value.trim();
-      if (!text) return;
-
-      addMessage(text, 'user');
-      input.value = '';
-      autoGrow();
-      input.disabled = true;
-      sendBtn.disabled = true;
-      showTyping();
-
-      try {
-        const res = await fetch('/get', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({ msg: text })
+      /* ---------- Helpers ---------- */
+      function timeNow() {
+        return new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
         });
-        const answer = await res.text();
-        removeTyping();
-        addMessage(answer.trim() || 'Sorry, I could not generate a response.', 'assistant');
-      } catch (err) {
-        removeTyping();
-        addMessage('Something went wrong. Please make sure the server is running and try again.', 'assistant');
-      } finally {
-        input.disabled = false;
-        autoGrow();
-        input.focus();
       }
-    });
+      function scrollToBottom() {
+        thread.scrollTop = thread.scrollHeight;
+      }
 
-    input.focus();
-  </script>
-</body>
+      function iconFor(sender) {
+        const tpl =
+          sender === "user" ? "#tpl-user-icon" : "#tpl-assistant-icon";
+        return $(tpl).content.cloneNode(true);
+      }
+
+      function addMessage(text, sender, sources) {
+        if (welcome && welcome.parentNode) welcome.remove();
+
+        const row = document.createElement("div");
+        row.className = "row row--" + sender;
+
+        const avatar = document.createElement("div");
+        avatar.className = "row__avatar";
+        avatar.setAttribute("aria-hidden", "true");
+        avatar.appendChild(iconFor(sender));
+
+        const content = document.createElement("div");
+        content.className = "row__content";
+
+        const author = document.createElement("div");
+        author.className = "row__author";
+        author.innerHTML =
+          sender === "user"
+            ? "You"
+            : "Medical Assistant <small>" + timeNow() + "</small>";
+
+        const bubble = document.createElement("div");
+        if (sender === "assistant") {
+          // Feature 13: render markdown for assistant answers
+          bubble.className = "bubble markdown";
+          bubble.innerHTML = renderMarkdown(text);
+        } else {
+          bubble.className = "bubble";
+          bubble.textContent = text;
+        }
+
+        content.appendChild(author);
+        content.appendChild(bubble);
+
+        // Feature 3: render source citations under assistant answers
+        if (
+          sender === "assistant" &&
+          Array.isArray(sources) &&
+          sources.length
+        ) {
+          const srcWrap = document.createElement("div");
+          srcWrap.className = "sources";
+          const label = document.createElement("span");
+          label.className = "sources__label";
+          label.textContent = "Sources";
+          srcWrap.appendChild(label);
+          sources.forEach((s) => {
+            const chip = document.createElement("span");
+            chip.className = "source-chip";
+            const page =
+              s.page === null || s.page === undefined ? "" : " · p." + s.page;
+            chip.textContent = s.source + page;
+            if (s.snippet) chip.title = s.snippet;
+            srcWrap.appendChild(chip);
+          });
+          content.appendChild(srcWrap);
+        }
+
+        if (sender === "assistant") {
+          const actions = document.createElement("div");
+          actions.className = "row__actions";
+          const copyBtn = document.createElement("button");
+          copyBtn.className = "action-btn";
+          copyBtn.type = "button";
+          copyBtn.innerHTML =
+            '<svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy';
+          copyBtn.addEventListener("click", () => {
+            navigator.clipboard.writeText(text).then(() => {
+              copyBtn.lastChild.textContent = " Copied";
+              setTimeout(() => {
+                copyBtn.lastChild.textContent = " Copy";
+              }, 1500);
+            });
+          });
+          actions.appendChild(copyBtn);
+          content.appendChild(actions);
+        }
+
+        row.appendChild(avatar);
+        row.appendChild(content);
+        threadInner.appendChild(row);
+        scrollToBottom();
+        return row;
+      }
+
+      function showTyping() {
+        const row = document.createElement("div");
+        row.className = "row row--assistant typing";
+        row.id = "typingRow";
+        const avatar = document.createElement("div");
+        avatar.className = "row__avatar";
+        avatar.setAttribute("aria-hidden", "true");
+        avatar.appendChild(iconFor("assistant"));
+        const content = document.createElement("div");
+        content.className = "row__content";
+        content.innerHTML =
+          '<div class="row__author">Medical Assistant</div><div class="bubble"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+        row.appendChild(avatar);
+        row.appendChild(content);
+        threadInner.appendChild(row);
+        scrollToBottom();
+      }
+      function removeTyping() {
+        const t = $("#typingRow");
+        if (t) t.remove();
+      }
+
+      /* ---------- Feature 13: markdown rendering ---------- */
+      function escapeHtml(s) {
+        const d = document.createElement("div");
+        d.textContent = s;
+        return d.innerHTML;
+      }
+      function renderMarkdown(text) {
+        try {
+          if (window.marked && window.DOMPurify) {
+            marked.setOptions({ breaks: true, gfm: true });
+            return DOMPurify.sanitize(marked.parse(text));
+          }
+        } catch (e) {
+          /* fall through */
+        }
+        return escapeHtml(text).replace(/\n/g, "<br>");
+      }
+
+      /* ---------- Input behavior ---------- */
+      function autoGrow() {
+        input.style.height = "auto";
+        input.style.height = Math.min(input.scrollHeight, 200) + "px";
+        sendBtn.disabled = input.value.trim().length === 0;
+      }
+      input.addEventListener("input", autoGrow);
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          form.requestSubmit();
+        }
+      });
+
+      /* ---------- Suggestion chips ---------- */
+      document.querySelectorAll(".suggestion").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          input.value = chip.dataset.q;
+          autoGrow();
+          input.focus();
+          form.requestSubmit();
+        });
+      });
+
+      /* ---------- Submit ---------- */
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const text = input.value.trim();
+        if (!text) return;
+
+        addMessage(text, "user");
+        input.value = "";
+        autoGrow();
+        input.disabled = true;
+        sendBtn.disabled = true;
+        showTyping();
+
+        try {
+          const res = await fetch("/get", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({ msg: text }),
+          });
+          const data = await res.json();
+          removeTyping();
+          addMessage(
+            (data.answer || "").trim() ||
+              "Sorry, I could not generate a response.",
+            "assistant",
+            data.sources,
+          );
+        } catch (err) {
+          removeTyping();
+          addMessage(
+            "Something went wrong. Please make sure the server is running and try again.",
+            "assistant",
+          );
+        } finally {
+          input.disabled = false;
+          autoGrow();
+          input.focus();
+        }
+      });
+
+      input.focus();
+    </script>
+  </body>
 </html>
