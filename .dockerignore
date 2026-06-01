@@ -1,0 +1,21 @@
+# Not needed inside the running container (the app uses Pinecone + chunks.pkl)
+.git
+.gitignore
+.dockerignore
+__pycache__/
+*.pyc
+*.pyo
+.env
+.venv/
+venv/
+ENV/
+.claude/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# The PDF is only used by store_index.py (run locally), not at runtime
+data/
+
+# Notebook + docs aren't needed in the image
+research/
+*.md
