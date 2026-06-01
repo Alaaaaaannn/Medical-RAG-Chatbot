@@ -1,42 +1,37 @@
+from pinecone import Pinecone, ServerlessSpec
 from langchain_pinecone import PineconeVectorStore
-from pinecone import Pinecone
-import os
-from src.helper import load_pdfs,filter,text_splitter,embeddings_init
-from dotenv import load_dotenv
-from pinecone import ServerlessSpec
 
-load_dotenv()
+from src import config, helper
 
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-os.environ["PINECONE_API_KEY"] = PINECONE_API_KEY
-os.environ["GROQ_API_KEY"] = GROQ_API_KEY
+def main():
+    print("Loading and chunking PDFs from", config.DATA_DIR, "...")
+    chunks = helper.build_chunks()
+    print(f"  -> {len(chunks)} usable chunks")
 
-extracted_data = load_pdfs("./data")
-filter_data = filter(extracted_data)
-text_chunk = text_splitter(filter_data)
+    helper.save_chunks(chunks)
+    print(f"  -> cached chunks to {config.CHUNKS_PATH}")
 
-embeddings = embeddings_init()
+    embeddings = helper.embeddings_init()
 
-pinecone_api_key = PINECONE_API_KEY
+    pc = Pinecone(api_key=config.PINECONE_API_KEY)
+    if not pc.has_index(config.INDEX_NAME):
+        print("Creating index", config.INDEX_NAME, f"(dim={config.EMBED_DIM})")
+        pc.create_index(
+            name=config.INDEX_NAME,
+            dimension=config.EMBED_DIM,
+            metric="cosine",
+            spec=ServerlessSpec(cloud="aws", region="us-east-1"),
+        )
 
-p_client = Pinecone(api_key=pinecone_api_key)
-
-index_name = "medical-rag-chatbot"
-
-if not p_client.has_index(index_name):
-    p_client.create_index(
-        name=index_name,
-        dimension=384,
-        metric="cosine",
-        spec=ServerlessSpec(cloud="aws",region="us-east-1")
+    print("Uploading embeddings to Pinecone ...")
+    PineconeVectorStore.from_documents(
+        documents=chunks,
+        embedding=embeddings,
+        index_name=config.INDEX_NAME,
     )
+    print("Done. Index", config.INDEX_NAME, "is ready.")
 
-index = p_client.Index(index_name)
 
-docsearch = PineconeVectorStore.from_documents(
-    documents=text_chunk,
-    index_name=index_name,
-    embedding=embeddings
-)
+if __name__ == "__main__":
+    main()
