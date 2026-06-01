@@ -1,4 +1,4 @@
-# Medical-Focused RAG Charbot
+# Medical-Focused RAG Chatbot
 
 This is one of the projects I have done to learn and implement end-to-end RAG systems, from development all the way to deployment. This is the stack I will be using for this project:
 
@@ -9,7 +9,7 @@ This is one of the projects I have done to learn and implement end-to-end RAG sy
 5. Pinecone for vector DB to store document embeddings.
 6. AWS especially EC2 to host the project on cloud along with a CI/CD pipeline (GitHub actions).
 
-### My understanding of RAG (before and while implementing this project) 
+### My understanding of RAG (before and while implementing this project)
 
 - Traditional LLMs like ChatGPT or Gemini and trained on certain data and the versions pertaining to these models (like GPT 4.0) are only aware of information upto the date of the data that was fed to them. So, asking any queries regarding newer occurances will result in the LLM providing fake results that are unreliable.
 - RAG is a newer methodology designed to bridge this problem. As we all know, machines only understand numbers, not text. But our newer information is often in multiple forms like text, images, audio, video, etc. which are not directly understood by machines or LLMs.
@@ -32,8 +32,8 @@ This is one of the projects I have done to learn and implement end-to-end RAG sy
 
 ### How does deployment work?
 
-- As mentioned earlier, we are deploying this on an Amazon EC2 instance along with GitHub actions CI/CD pipeline. 
-- Every commit via Github is passed and verified Github actions, that runs checks and notices errors, after which it containerizes the application into a Docker image, that gets stored onto the ECR or related database connected to the EC2. 
+- As mentioned earlier, we are deploying this on an Amazon EC2 instance along with GitHub actions CI/CD pipeline.
+- Every commit via Github is passed and verified Github actions, that runs checks and notices errors, after which it containerizes the application into a Docker image, that gets stored onto the ECR or related database connected to the EC2.
 - EC2 is then port mapped to the IP address for the backend that gets exposed for the frontend to use.
 
 ### Project Setup
@@ -45,6 +45,6 @@ STEPS:
 1. Clone this repository: (under Git Bash) git clone https://github.com/Alaaaaaannn/Medical-RAG-Chatbot.git
 
 2. Create a virtual environment using conda after cloning and opening repo directory: conda create -n medical-rag python=3.10 -y
-and then: conda activate medical-rag
+   and then: conda activate medical-rag
 
 3. Install the requirements from the txt file: pip install -r requirements.txt
