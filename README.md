@@ -10,6 +10,8 @@ pinned: false
 
 # Medical-Focused RAG Chatbot
 
+The live website: https://alanfernandes-medical-rag-chatbot.hf.space
+
 This is one of the projects I have done to learn and implement end-to-end RAG systems, from development all the way to deployment. This is the stack I will be using for this project:
 
 1. Python for the programming language and wide access to GenAI related libraries.
