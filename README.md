@@ -1,13 +1,3 @@
----
-title: Medical RAG Chatbot
-emoji: 🩺
-colorFrom: blue
-colorTo: green
-sdk: docker
-app_port: 7860
-pinned: false
----
-
 # Medical-Focused RAG Chatbot
 
 The live website: https://alanfernandes-medical-rag-chatbot.hf.space
@@ -41,12 +31,6 @@ This is one of the projects I have done to learn and implement end-to-end RAG sy
 - User interacts with the system like this, they ask a query like "What are the symptoms of flu?", which goes through the embedding process just like the original data, and then goes through the vector DB, that returns the rank result. A parameter, k along with this rank result and the original question is passed to the LLM, which provides all the relevant context required by the LLM. Thus it can give the result tailored to the data that we have and avoid hallucinatiosn or wrong information.
 - So to summarize, the architecture follows: Input data->Docs extraction->Chunking->Embedding models (Sentence transformer)->Vector embeddings->Vector DB (Pinecone).
 - Retrieval or querying follows this architecture: User query->Chunking->Embedding models->Vector embeddings-> Inference with Vector DB to get rank result-> Current rank result, k value and original sentence passed to the LLM-> LLM result decoded into text and displayed back to the user.
-
-### How does deployment work?
-
-- As mentioned earlier, we are deploying this on an Amazon EC2 instance along with GitHub actions CI/CD pipeline.
-- Every commit via Github is passed and verified Github actions, that runs checks and notices errors, after which it containerizes the application into a Docker image, that gets stored onto the ECR or related database connected to the EC2.
-- EC2 is then port mapped to the IP address for the backend that gets exposed for the frontend to use.
 
 ### Project Setup
 
@@ -83,7 +67,7 @@ A clean, ChatGPT-style chat page (built with plain HTML, CSS and JavaScript):
 
 ### Smarter answers (making the AI search better)
 
-These features help the bot find the *right* information from the medical book and answer accurately:
+These features help the bot find the _right_ information from the medical book and answer accurately:
 
 - Better book pieces (chunking): the book is split into reasonably sized pieces so each one keeps its full meaning, and blank/junk pieces are thrown away.
 - Smarter understanding (embeddings): I upgraded the model that turns text into numbers to a better one (called BGE), so searches find more relevant pages.
